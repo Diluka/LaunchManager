@@ -10,6 +10,7 @@ import SwiftData
 
 @main
 struct LaunchManagerApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             LaunchItem.self,
@@ -24,9 +25,15 @@ struct LaunchManagerApp: App {
     }()
 
     var body: some Scene {
-        WindowGroup {
+        Window("Launch Manager", id: "main") {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+    }
+}
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        FilesObserver.shared.startObserving()
     }
 }

@@ -10,14 +10,22 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [LaunchItem]
+    @Query(sort: \LaunchItem.createdAt) private var items: [LaunchItem]
+    
+    @State private var presentedItem: LaunchItem?
     
     var body: some View {
         NavigationSplitView {
             List {
                 ForEach(items) { item in
                     NavigationLink(value: item) {
-                        Text(item.label.isEmpty ? "New Item" : item.label)
+                        Label {
+                            Text(item.label.isEmpty ? "New Item" : item.label)
+                        } icon: {
+                            Image(systemName: "circle")
+                                .foregroundColor(item.active ? .green : .gray)
+                        }
+                    
                     }
                     .contextMenu {
                         Button("Delete", role: .destructive) {
@@ -30,6 +38,7 @@ struct ContentView: View {
             }
             .navigationDestination(for: LaunchItem.self) { item in
                 ItemEditorView(item: item)
+                    .frame(minWidth: 300, idealWidth: 600)
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
             .toolbar {
@@ -42,6 +51,20 @@ struct ContentView: View {
             
         } detail: {
             Text("Select an item")
+        }
+        .onAppear {
+            FilesObserver.shared.set(files: items.filter(\.active).map { $0.plistPath().path })
+        }
+        .onChange(of: items) {
+            Task(priority: .background) {
+                let files = items.filter(\.active).map { $0.plistPath().path }
+                FilesObserver.shared.set(files: files)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .fileRemoved)) { notification in
+            let path = notification.object as! String
+            let label = URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent
+            items.filter({ $0.label == label }).forEach { $0.active = false }
         }
     }
 
@@ -66,9 +89,4 @@ struct ContentView: View {
             item.active.toggle()
         }
     }
-}
-
-#Preview {
-    ContentView()
-        .modelContainer(for: LaunchItem.self, inMemory: true)
 }

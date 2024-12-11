@@ -13,22 +13,23 @@ struct ItemEditorView: View {
     
     var body: some View {
         Form {
-//            State: active?
             HStack {
                 Text("Status")
                 Spacer()
                 Text(item.active ? "Active" : "Inactive")
                     .foregroundColor(item.active ? .green : .red)
-                
             }
             
-            Section(header: Text("General")) {
-                TextField("Label", text: $item.label, prompt: Text("com.example.app"))
-                TextField("Command", text: $item.command, prompt: Text("echo \"Hello, World!\""))
+            Section {
+                TextField("Label", text: $item.label, prompt: Text("Required (e.g. com.example.app)"))
+                TextField("Command", text: $item.command, prompt: Text("Required (e.g. echo \"Hello world\")"))
+                TextField("Working Directory", text: $item.workingDirectory, prompt: Text("Optional (default: /)"))
+            }
+            
+            Section {
                 Toggle("Run at Load", isOn: $item.runAtLoad)
                 Toggle("Keep Alive", isOn: $item.keepAlive)
                 TextField("Start Interval", value: $item.startInterval, format: .number, prompt: Text("None"))
-                TextField("Working Directory", text: $item.workingDirectory, prompt: Text("Optional"))
             }
         }
         .disabled(!item.needsUpdate)
@@ -45,20 +46,22 @@ struct ItemEditorView: View {
                 } else {
                     Button(action: {
                         item.needsUpdate = true
+                        // Remove file from ~/Library/LaunchAgents
+                        setActive(false)
                     }) {
                         Text("Edit")
                     }
                 }
             }
             
-            ToolbarItem {
-                
-                Button(action: {
-                    setActive(!item.active)
-                }) {
-                    Text(item.active ? "Deactivate" : "Activate")
+            if !item.needsUpdate {
+                ToolbarItem {
+                    Button(action: {
+                        setActive(!item.active)
+                    }) {
+                        Text(item.active ? "Deactivate" : "Activate")
+                    }
                 }
-
             }
         }
         .navigationTitle(item.label.isEmpty ? "New Item" : item.label)
@@ -68,26 +71,10 @@ struct ItemEditorView: View {
     private func setActive(_ active: Bool) {
         if active {
             try? item.activate()
+            FilesObserver.shared.add(path: item.plistPath().path)
         } else {
             try? item.deactivate()
+            FilesObserver.shared.remove(path: item.plistPath().path)
         }
     }
-    
-        
-    private func removePlist() {
-        let libraryDirectory = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-        let launchAgentsFolder = libraryDirectory.appendingPathComponent("LaunchAgents")
-        guard launchAgentsFolder.startAccessingSecurityScopedResource() else {
-            print("Could not access LaunchAgents folder")
-            return
-        }
-        let plistFile = launchAgentsFolder.appendingPathComponent("\(item.label).plist")
-        do {
-            try FileManager.default.removeItem(at: plistFile)
-        } catch {
-            print("Could not remove plist: \(error)")
-            return
-        }
-    }
-
 }

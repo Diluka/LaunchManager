@@ -19,9 +19,12 @@ final class LaunchItem {
     var active: Bool = false
     var needsUpdate: Bool = true
     
+    var createdAt: Date
+    
     init(label: String, command: String) {
         self.label = label
         self.command = command
+        self.createdAt = Date()
     }
     
     convenience init() {
@@ -30,6 +33,12 @@ final class LaunchItem {
 }
 
 extension LaunchItem {
+    func plistPath() -> URL {
+        let libraryDirectory = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+        let launchAgentsFolder = libraryDirectory.appendingPathComponent("LaunchAgents")
+        return launchAgentsFolder.appendingPathComponent("\(label).plist")
+    }
+    
     func exportAsPlist() -> String {
         var plistString = ""
         plistString += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -82,27 +91,13 @@ extension LaunchItem {
     
     func activate() throws {
         let plistString = exportAsPlist()
-        // ~/Library/LaunchAgents
-        let libraryDirectory = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-        let launchAgentsFolder = libraryDirectory.appendingPathComponent("LaunchAgents")
-        print(launchAgentsFolder)
-        guard launchAgentsFolder.startAccessingSecurityScopedResource() else {
-            print("Could not access LaunchAgents folder")
-            return
-        }
-        let plistFile = launchAgentsFolder.appendingPathComponent("\(label).plist")
+        let plistFile = plistPath()
         try plistString.write(to: plistFile, atomically: true, encoding: .utf8)
         active = true
     }
     
     func deactivate() throws {
-        let libraryDirectory = try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-        let launchAgentsFolder = libraryDirectory.appendingPathComponent("LaunchAgents")
-        guard launchAgentsFolder.startAccessingSecurityScopedResource() else {
-            print("Could not access LaunchAgents folder")
-            return
-        }
-        let plistFile = launchAgentsFolder.appendingPathComponent("\(label).plist")
+        let plistFile = plistPath()
         try FileManager.default.removeItem(at: plistFile)
         active = false
     }
