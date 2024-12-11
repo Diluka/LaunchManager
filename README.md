@@ -1,5 +1,5 @@
 # LaunchManager
 
-Simple GUI tool to manage `launchctl`'s `.plist` files on macOS.
+Simple GUI tool to manage `launchd`'s `.plist` files on macOS.
 
 ![](Documentation/screenshot.png)
