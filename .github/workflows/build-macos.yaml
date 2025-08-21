@@ -15,10 +15,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode 15.5
+      - name: Select Xcode 16.1
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '15.5'  # Pin to 15.5 to match project file format (objectVersion 77)
+          xcode-version: '16.1'  # Required for objectVersion 77 project format
 
       - name: Build Universal (arm64 + x86_64)
         run: |
